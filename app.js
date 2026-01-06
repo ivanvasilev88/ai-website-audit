@@ -65,6 +65,9 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
+        // Preserve original case for display
+        const originalUrl = url;
+
         // Auto-add https:// if no protocol specified
         if (!url.startsWith('http://') && !url.startsWith('https://')) {
             url = 'https://' + url;
@@ -76,8 +79,12 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!urlObj.hostname || urlObj.hostname.length < 3) {
                 throw new Error('Invalid hostname');
             }
-            // Update input with formatted URL
-            urlInput.value = url;
+            // Update input with formatted URL (preserve case in path/query if present)
+            // Only normalize the protocol and hostname, keep rest as user typed
+            const protocol = urlObj.protocol;
+            const hostname = urlObj.hostname.toLowerCase(); // Hostnames are case-insensitive
+            const pathAndQuery = urlObj.pathname + urlObj.search + urlObj.hash;
+            urlInput.value = protocol + '//' + hostname + pathAndQuery;
         } catch (e) {
             showError('Please enter a valid website (e.g., example.com or www.example.com)');
             return;
@@ -154,6 +161,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 const lockedEl = createLockedInsightElement(insight);
                 lockedInsights.appendChild(lockedEl);
             });
+            
+            // Show review recommendations preview in locked state (blurred/limited)
+            if (data.reviewRecommendations && data.reviewRecommendations.length > 0) {
+                displayReviewRecommendationsLocked(data.reviewRecommendations);
+            }
         } else {
             // Unlocked state - show all insights
             uncertaintySection.classList.add('hidden');
@@ -180,6 +192,17 @@ document.addEventListener('DOMContentLoaded', () => {
                     const insightEl = createInsightElement(fullInsight, false);
                     allInsights.appendChild(insightEl);
                 });
+            }
+            
+            // Show review recommendations if available (in unlocked state)
+            if (data.reviewRecommendations && data.reviewRecommendations.length > 0) {
+                displayReviewRecommendations(data.reviewRecommendations);
+            } else {
+                // Hide recommendations section if no recommendations
+                const recommendationsSection = document.getElementById('reviewRecommendations');
+                if (recommendationsSection) {
+                    recommendationsSection.classList.add('hidden');
+                }
             }
         }
 
@@ -237,15 +260,92 @@ document.addEventListener('DOMContentLoaded', () => {
         return div;
     }
 
+    function displayReviewRecommendations(recommendations) {
+        const recommendationsSection = document.getElementById('reviewRecommendations');
+        const recommendationsList = document.getElementById('recommendationsList');
+        
+        if (!recommendationsSection || !recommendationsList) return;
+        
+        recommendationsSection.classList.remove('hidden');
+        recommendationsList.innerHTML = '';
+        
+        recommendations.forEach((rec, index) => {
+            const recCard = document.createElement('div');
+            recCard.className = 'recommendation-card';
+            
+            const priorityClass = rec.priority === 'High' ? 'priority-high' : rec.priority === 'Medium' ? 'priority-medium' : 'priority-low';
+            
+            recCard.innerHTML = `
+                <div class="recommendation-header">
+                    <span class="recommendation-number">${index + 1}</span>
+                    <div class="recommendation-title-group">
+                        <h4 class="recommendation-title">${rec.title}</h4>
+                        <span class="recommendation-priority ${priorityClass}">${rec.priority} Priority</span>
+                    </div>
+                </div>
+                <div class="recommendation-category">${rec.category}</div>
+                <p class="recommendation-description">${rec.description}</p>
+                <div class="recommendation-action">
+                    <strong>Action:</strong> ${rec.action}
+                </div>
+                <div class="recommendation-impact">
+                    <strong>Impact:</strong> ${rec.impact}
+                </div>
+            `;
+            
+            recommendationsList.appendChild(recCard);
+        });
+    }
+    
+    function displayReviewRecommendationsLocked(recommendations) {
+        const recommendationsSection = document.getElementById('reviewRecommendationsLocked');
+        const recommendationsList = document.getElementById('recommendationsListLocked');
+        
+        if (!recommendationsSection || !recommendationsList) return;
+        
+        recommendationsSection.classList.remove('hidden');
+        recommendationsList.innerHTML = '';
+        
+        // Show only first 3 recommendations in locked state (preview)
+        const previewCount = Math.min(3, recommendations.length);
+        recommendations.slice(0, previewCount).forEach((rec, index) => {
+            const recCard = document.createElement('div');
+            recCard.className = 'recommendation-card recommendation-card-locked';
+            
+            const priorityClass = rec.priority === 'High' ? 'priority-high' : rec.priority === 'Medium' ? 'priority-medium' : 'priority-low';
+            
+            recCard.innerHTML = `
+                <div class="recommendation-header">
+                    <span class="recommendation-number">${index + 1}</span>
+                    <div class="recommendation-title-group">
+                        <h4 class="recommendation-title">${rec.title}</h4>
+                        <span class="recommendation-priority ${priorityClass}">${rec.priority} Priority</span>
+                    </div>
+                </div>
+                <div class="recommendation-category">${rec.category}</div>
+                <p class="recommendation-description">${rec.description}</p>
+            `;
+            
+            recommendationsList.appendChild(recCard);
+        });
+        
+        if (recommendations.length > previewCount) {
+            const moreCard = document.createElement('div');
+            moreCard.className = 'recommendation-card-more';
+            moreCard.innerHTML = `<p>+ ${recommendations.length - previewCount} more recommendations available after unlock</p>`;
+            recommendationsList.appendChild(moreCard);
+        }
+    }
+
     function generateSummaryFromScore(score) {
         if (score >= 80) {
-            return "AI systems have a strong understanding of your website's purpose and content.";
+            return "AI agents have a strong understanding of your restaurant or bar, making you highly discoverable in food-related searches and recommendations.";
         } else if (score >= 60) {
-            return "AI partially understands your website, but several important signals remain unclear or misinterpreted.";
+            return "AI agents partially understand your establishment, but several important signals remain unclear, limiting your visibility in discovery searches.";
         } else if (score >= 40) {
-            return "AI systems form an incomplete understanding of your website, with significant interpretation gaps.";
+            return "AI agents form an incomplete understanding of your restaurant or bar, with significant gaps that reduce your discoverability.";
         } else {
-            return "AI struggles to form a coherent understanding of your website, with many signals missing or unclear.";
+            return "AI agents struggle to identify and understand your establishment, making you nearly invisible in food discovery searches and recommendations.";
         }
     }
 
@@ -321,6 +421,12 @@ document.addEventListener('DOMContentLoaded', () => {
             isUnlocked = true;
             currentReportData = data;
             displayResults(data);
+            
+            // Show review recommendations if available
+            if (data.reviewRecommendations && data.reviewRecommendations.length > 0) {
+                displayReviewRecommendations(data.reviewRecommendations);
+            }
+            
             paymentModal.classList.add('hidden');
             
         } catch (err) {

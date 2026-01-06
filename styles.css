@@ -1293,3 +1293,209 @@ header {
         padding: 30px 20px;
     }
 }
+
+/* Review Recommendations Styles */
+.review-recommendations-section {
+    margin-top: 50px;
+    padding: 40px 0;
+    border-top: 2px solid rgba(102, 126, 234, 0.1);
+}
+
+.review-recommendations-section h3 {
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: #1e293b;
+    margin-bottom: 15px;
+    background: var(--primary-gradient);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.recommendations-intro {
+    font-size: 1.1rem;
+    color: #475569;
+    line-height: 1.7;
+    margin-bottom: 30px;
+}
+
+.recommendations-list {
+    display: flex;
+    flex-direction: column;
+    gap: 25px;
+}
+
+.recommendation-card {
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(248, 250, 252, 0.95) 100%);
+    border-radius: 16px;
+    padding: 25px;
+    border-left: 5px solid #667eea;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.recommendation-card:hover {
+    transform: translateX(8px) translateY(-2px);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+}
+
+.recommendation-header {
+    display: flex;
+    align-items: flex-start;
+    gap: 15px;
+    margin-bottom: 12px;
+}
+
+.recommendation-number {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    background: var(--primary-gradient);
+    color: white;
+    border-radius: 50%;
+    font-weight: 700;
+    font-size: 1.1rem;
+    flex-shrink: 0;
+}
+
+.recommendation-title-group {
+    flex: 1;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 15px;
+    flex-wrap: wrap;
+}
+
+.recommendation-title {
+    font-size: 1.3rem;
+    font-weight: 600;
+    color: #1e293b;
+    margin: 0;
+    flex: 1;
+}
+
+.recommendation-priority {
+    padding: 6px 12px;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.priority-high {
+    background: linear-gradient(135deg, rgba(239, 68, 68, 0.1) 0%, rgba(220, 38, 38, 0.1) 100%);
+    color: #991b1b;
+    border: 1px solid #ef4444;
+}
+
+.priority-medium {
+    background: linear-gradient(135deg, rgba(245, 158, 11, 0.1) 0%, rgba(217, 119, 6, 0.1) 100%);
+    color: #92400e;
+    border: 1px solid #f59e0b;
+}
+
+.priority-low {
+    background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
+    color: #4c1d95;
+    border: 1px solid #667eea;
+}
+
+.recommendation-category {
+    display: inline-block;
+    padding: 4px 10px;
+    background: rgba(102, 126, 234, 0.1);
+    color: #667eea;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    margin-bottom: 12px;
+}
+
+.recommendation-description {
+    font-size: 1.05rem;
+    color: #475569;
+    line-height: 1.7;
+    margin: 0 0 15px 0;
+}
+
+.recommendation-action,
+.recommendation-impact {
+    padding: 12px;
+    background: rgba(248, 250, 252, 0.8);
+    border-radius: 8px;
+    margin-top: 10px;
+    font-size: 0.95rem;
+    line-height: 1.6;
+    color: #334155;
+}
+
+.recommendation-action strong,
+.recommendation-impact strong {
+    color: #1e293b;
+    display: block;
+    margin-bottom: 5px;
+}
+
+@media (max-width: 768px) {
+    .recommendation-title-group {
+        flex-direction: column;
+    }
+    
+    .recommendation-priority {
+        align-self: flex-start;
+    }
+}
+
+/* Locked Recommendations Styles */
+.review-recommendations-section-locked {
+    margin-top: 50px;
+    padding: 40px 0;
+    border-top: 2px solid rgba(102, 126, 234, 0.1);
+    position: relative;
+}
+
+.recommendation-card-locked {
+    opacity: 0.7;
+    filter: blur(2px);
+    pointer-events: none;
+}
+
+.recommendations-locked-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(255, 255, 255, 0.8);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 16px;
+    backdrop-filter: blur(4px);
+    z-index: 10;
+}
+
+.recommendations-locked-overlay p {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: #667eea;
+    text-align: center;
+    padding: 20px;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.recommendation-card-more {
+    background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
+    border: 2px dashed #667eea;
+    border-radius: 16px;
+    padding: 25px;
+    text-align: center;
+    color: #667eea;
+    font-weight: 600;
+    margin-top: 15px;
+}

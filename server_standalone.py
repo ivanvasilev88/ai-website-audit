@@ -57,6 +57,35 @@ class HTMLAuditParser(HTMLParser):
         self.content_length = 0
         self.aria_labels = 0
         self.landmarks = 0
+        # Restaurant/Bar specific
+        self.restaurant_schema = False
+        self.menu_links = []
+        self.location_info = False
+        self.hours_info = False
+        self.reservation_links = []
+        self.review_mentions = False
+        self.cuisine_mentions = False
+        self.price_range_mentions = False
+        self.phone_number = False
+        self.address_info = False
+        # Review analysis
+        self.review_widgets = []
+        self.review_platforms = []  # Google, TripAdvisor, Yelp, etc.
+        self.review_links = []
+        self.rating_mentions = False
+        self.social_media_links = []
+        # Additional Restaurant/Bar specific
+        self.cuisine_type = []
+        self.dietary_restrictions = []  # vegan, gluten-free, vegetarian, etc.
+        self.special_features = []  # outdoor seating, live music, happy hour, etc.
+        self.photo_galleries = []
+        self.events_calendar = False
+        self.gift_cards = False
+        self.catering_info = False
+        self.private_dining = False
+        self.delivery_takeout = False
+        self.parking_info = False
+        self.wifi_info = False
         
     def handle_starttag(self, tag, attrs):
         attrs_dict = dict(attrs)
@@ -104,6 +133,21 @@ class HTMLAuditParser(HTMLParser):
             href = attrs_dict.get('href', '')
             if href:
                 self.links.append(href)
+                # Check for menu links
+                href_lower = href.lower()
+                if 'menu' in href_lower:
+                    self.menu_links.append(href)
+                # Check for reservation links
+                if any(keyword in href_lower for keyword in ['reserv', 'book', 'table', 'booking']):
+                    self.reservation_links.append(href)
+                # Check for menu links
+                link_text = attrs_dict.get('text', '').lower() if 'text' in attrs_dict else ''
+                href_lower = href.lower()
+                if 'menu' in href_lower or 'menu' in link_text:
+                    self.menu_links.append(href)
+                # Check for reservation links
+                if 'reserv' in href_lower or 'book' in href_lower or 'table' in href_lower or 'reserv' in link_text or 'book' in link_text:
+                    self.reservation_links.append(href)
                 
         # Forms
         if tag == 'form':
@@ -173,6 +217,85 @@ class HTMLAuditParser(HTMLParser):
         if self.in_title:
             self.title += data
         self.content_length += len(data)
+        
+        # Check for restaurant/bar specific content
+        data_lower = data.lower()
+        # Location/address detection
+        if any(keyword in data_lower for keyword in ['address', 'location', 'street', 'avenue', 'road', 'zip', 'postal']):
+            self.location_info = True
+            self.address_info = True
+        # Hours detection
+        if any(keyword in data_lower for keyword in ['hours', 'open', 'closed', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday', 'am', 'pm']):
+            self.hours_info = True
+        # Phone detection
+        if re.search(r'\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}', data):
+            self.phone_number = True
+        # Review mentions
+        if any(keyword in data_lower for keyword in ['review', 'rating', 'star', 'yelp', 'tripadvisor', 'google review']):
+            self.review_mentions = True
+        # Rating detection (stars, ratings)
+        if re.search(r'\d+\.?\d*\s*(star|rating|out of)', data_lower) or re.search(r'[⭐★]', data):
+            self.rating_mentions = True
+        
+        # Cuisine type detection
+        cuisine_keywords = ['italian', 'mexican', 'chinese', 'japanese', 'thai', 'indian', 'french', 'mediterranean', 
+                           'american', 'seafood', 'steakhouse', 'pizza', 'sushi', 'bbq', 'barbecue', 'asian', 
+                           'fusion', 'tapas', 'bistro', 'cafe', 'brasserie', 'pub', 'bar', 'grill', 'diner']
+        for cuisine in cuisine_keywords:
+            if cuisine in data_lower and cuisine.title() not in self.cuisine_type:
+                self.cuisine_type.append(cuisine.title())
+        
+        # Dietary restrictions
+        dietary_keywords = ['vegan', 'vegetarian', 'gluten-free', 'gluten free', 'dairy-free', 'dairy free', 
+                           'keto', 'paleo', 'halal', 'kosher', 'nut-free', 'nut free', 'allergy', 'allergen']
+        for dietary in dietary_keywords:
+            if dietary in data_lower and dietary.title() not in [d.lower() for d in self.dietary_restrictions]:
+                self.dietary_restrictions.append(dietary.title())
+        
+        # Special features
+        feature_keywords = ['outdoor seating', 'patio', 'terrace', 'live music', 'entertainment', 'happy hour', 
+                           'brunch', 'breakfast', 'lunch', 'dinner', 'late night', 'late-night', 'wine bar', 
+                           'cocktail', 'craft beer', 'draft beer', 'full bar', 'bar', 'rooftop', 'waterfront', 
+                           'view', 'fireplace', 'private room', 'private dining', 'event space', 'catering', 
+                           'takeout', 'take-out', 'delivery', 'curbside', 'drive-thru', 'drive through', 
+                           'parking', 'valet', 'wifi', 'wi-fi', 'free wifi', 'pet friendly', 'dog friendly']
+        for feature in feature_keywords:
+            if feature in data_lower and feature.title() not in [f.lower() for f in self.special_features]:
+                self.special_features.append(feature.title())
+        
+        # Events/Calendar
+        if any(keyword in data_lower for keyword in ['event', 'calendar', 'upcoming', 'schedule', 'reservation', 'book']):
+            self.events_calendar = True
+        
+        # Gift cards
+        if any(keyword in data_lower for keyword in ['gift card', 'gift certificate', 'gift']):
+            self.gift_cards = True
+        
+        # Catering
+        if 'catering' in data_lower:
+            self.catering_info = True
+        
+        # Private dining
+        if any(keyword in data_lower for keyword in ['private dining', 'private room', 'private event', 'event space']):
+            self.private_dining = True
+        
+        # Delivery/Takeout
+        if any(keyword in data_lower for keyword in ['delivery', 'takeout', 'take-out', 'pickup', 'pick-up', 'order online']):
+            self.delivery_takeout = True
+        
+        # Parking
+        if any(keyword in data_lower for keyword in ['parking', 'valet', 'garage', 'lot']):
+            self.parking_info = True
+        
+        # WiFi
+        if any(keyword in data_lower for keyword in ['wifi', 'wi-fi', 'wireless', 'internet']):
+            self.wifi_info = True
+        # Cuisine mentions
+        if any(keyword in data_lower for keyword in ['cuisine', 'italian', 'mexican', 'asian', 'american', 'french', 'japanese', 'chinese', 'indian', 'mediterranean', 'steakhouse', 'seafood', 'pizza', 'sushi', 'bar', 'pub', 'bistro', 'cafe', 'restaurant']):
+            self.cuisine_mentions = True
+        # Price range
+        if any(keyword in data_lower for keyword in ['$', 'price', 'affordable', 'moderate', 'upscale', 'fine dining', 'budget']):
+            self.price_range_mentions = True
 
 def perform_ai_audit(url):
     """Perform AI audit on a website using only standard library"""
@@ -219,9 +342,38 @@ def perform_ai_audit(url):
         
         html = response.read().decode('utf-8', errors='ignore')
         
+        # Check for restaurant schema in JSON-LD before parsing
+        import json
+        restaurant_schema_found = False
+        try:
+            # Find all JSON-LD scripts
+            json_ld_pattern = r'<script[^>]*type=["\']application/ld\+json["\'][^>]*>(.*?)</script>'
+            json_ld_matches = re.findall(json_ld_pattern, html, re.DOTALL | re.IGNORECASE)
+            for json_str in json_ld_matches:
+                try:
+                    data = json.loads(json_str)
+                    # Check if it's a restaurant schema
+                    if isinstance(data, dict):
+                        schema_type = data.get('@type', '').lower()
+                        if 'restaurant' in schema_type or 'foodestablishment' in schema_type or 'bar' in schema_type:
+                            restaurant_schema_found = True
+                            break
+                    elif isinstance(data, list):
+                        for item in data:
+                            if isinstance(item, dict):
+                                schema_type = item.get('@type', '').lower()
+                                if 'restaurant' in schema_type or 'foodestablishment' in schema_type or 'bar' in schema_type:
+                                    restaurant_schema_found = True
+                                    break
+                except:
+                    pass
+        except:
+            pass
+        
         # Parse HTML
         parser = HTMLAuditParser()
         parser.feed(html)
+        parser.restaurant_schema = restaurant_schema_found
         
         audit_results = []
         total_score = 0
@@ -457,6 +609,74 @@ def perform_ai_audit(url):
         total_score += media_score
         max_score += 5
         
+        # Restaurant/Bar Specific Checks (21-25)
+        
+        # 21. Restaurant Schema (JSON-LD)
+        restaurant_schema_score = 15 if parser.restaurant_schema else 0
+        audit_results.append({
+            'name': 'Restaurant/Bar Schema Markup',
+            'points': restaurant_schema_score,
+            'maxPoints': 15,
+            'status': 'pass' if restaurant_schema_score == 15 else 'fail'
+        })
+        total_score += restaurant_schema_score
+        max_score += 15
+        
+        # 22. Menu Availability
+        menu_score = 10 if len(parser.menu_links) > 0 else 0
+        audit_results.append({
+            'name': 'Menu Information Available',
+            'points': menu_score,
+            'maxPoints': 10,
+            'status': 'pass' if menu_score == 10 else 'fail'
+        })
+        total_score += menu_score
+        max_score += 10
+        
+        # 23. Location & Contact Information
+        location_score = 10 if parser.location_info and parser.phone_number else (5 if parser.location_info or parser.phone_number else 0)
+        audit_results.append({
+            'name': 'Location & Contact Information',
+            'points': location_score,
+            'maxPoints': 10,
+            'status': 'pass' if location_score >= 8 else ('warning' if location_score > 0 else 'fail')
+        })
+        total_score += location_score
+        max_score += 10
+        
+        # 24. Operating Hours
+        hours_score = 10 if parser.hours_info else 0
+        audit_results.append({
+            'name': 'Operating Hours Information',
+            'points': hours_score,
+            'maxPoints': 10,
+            'status': 'pass' if hours_score == 10 else 'fail'
+        })
+        total_score += hours_score
+        max_score += 10
+        
+        # 25. Reservation/Booking System
+        reservation_score = 10 if len(parser.reservation_links) > 0 else 0
+        audit_results.append({
+            'name': 'Reservation/Booking System',
+            'points': reservation_score,
+            'maxPoints': 10,
+            'status': 'pass' if reservation_score == 10 else 'fail'
+        })
+        total_score += reservation_score
+        max_score += 10
+        
+        # 26. Review Visibility & Integration
+        review_visibility_score = 10 if len(parser.review_platforms) > 0 or len(parser.review_widgets) > 0 else (5 if parser.review_mentions or parser.rating_mentions else 0)
+        audit_results.append({
+            'name': 'Review Visibility & Integration',
+            'points': review_visibility_score,
+            'maxPoints': 10,
+            'status': 'pass' if review_visibility_score >= 8 else ('warning' if review_visibility_score > 0 else 'fail')
+        })
+        total_score += review_visibility_score
+        max_score += 10
+        
         # Calculate final score
         final_score = round((total_score / max_score) * 100) if max_score > 0 else 0
         
@@ -574,6 +794,62 @@ def transform_to_interpretation(insight, url):
         'Multimedia Content': {
             'title': 'How AI processes your rich media',
             'explanation': f'{"AI recognizes rich media content on your site." if status == "pass" else "AI may not recognize multimedia elements that are part of your content."}'
+        },
+        'Restaurant/Bar Schema Markup': {
+            'title': 'How AI identifies your restaurant or bar',
+            'explanation': f'{"AI agents can clearly identify your establishment as a restaurant or bar, making you discoverable in food-related queries." if status == "pass" else "AI agents may not recognize your website as a restaurant or bar, making you invisible in food discovery searches."}'
+        },
+        'Menu Information Available': {
+            'title': 'How AI understands what you serve',
+            'explanation': f'{"AI agents can find your menu and understand your offerings, helping customers discover your cuisine." if status == "pass" else "AI agents cannot find your menu, making it impossible to recommend your dishes or cuisine type to customers."}'
+        },
+        'Location & Contact Information': {
+            'title': 'How AI helps customers find you',
+            'explanation': f'{"AI agents can provide your location and contact info to customers searching for nearby restaurants." if status == "pass" else "AI agents cannot help customers find your location or contact you, reducing local discovery."}'
+        },
+        'Operating Hours Information': {
+            'title': 'How AI knows when you are open',
+            'explanation': f'{"AI agents can tell customers when you are open, enabling real-time recommendations." if status == "pass" else "AI agents cannot determine your hours, so they may recommend you when you are closed or skip you during open hours."}'
+        },
+        'Reservation/Booking System': {
+            'title': 'How AI helps customers book tables',
+            'explanation': f'{"AI agents can direct customers to your booking system, enabling seamless reservations." if status == "pass" else "AI agents cannot help customers make reservations, reducing conversion opportunities."}'
+        },
+        'Review Visibility & Integration': {
+            'title': 'How AI understands customer sentiment',
+            'explanation': 'AI agents can access and analyze customer reviews to understand your restaurant reputation and customer satisfaction.' if status == 'pass' else 'AI agents cannot find or analyze customer reviews, missing critical signals about your restaurant quality and customer satisfaction.'
+        },
+        'Cuisine Type Identification': {
+            'title': 'How AI categorizes your cuisine',
+            'explanation': f'{"AI agents can identify your cuisine type, helping customers find restaurants that match their preferences." if status == "pass" else "AI agents cannot determine your cuisine type, making it harder for customers to discover you when searching for specific food types."}'
+        },
+        'Dietary Restrictions Information': {
+            'title': 'How AI helps customers with dietary needs',
+            'explanation': f'{"AI agents can identify dietary options (vegan, gluten-free, etc.), helping customers with specific dietary requirements find your restaurant." if status == "pass" else "AI agents cannot identify dietary options, making your restaurant invisible to customers searching for specific dietary accommodations."}'
+        },
+        'Special Features & Amenities': {
+            'title': 'How AI understands your unique offerings',
+            'explanation': f'{"AI agents can identify special features (outdoor seating, live music, etc.), helping match customers to restaurants with specific amenities." if status == "pass" else "AI agents cannot identify special features, missing opportunities to match customers looking for specific experiences."}'
+        },
+        'Visual Content & Photo Galleries': {
+            'title': 'How AI visualizes your restaurant',
+            'explanation': f'{"AI agents can access visual content to understand your restaurant atmosphere and food presentation." if status == "pass" else "AI agents have limited visual information, making it harder to understand your restaurant atmosphere and food quality."}'
+        },
+        'Events & Calendar Information': {
+            'title': 'How AI knows about your events',
+            'explanation': f'{"AI agents can identify upcoming events and special occasions, helping customers discover time-sensitive opportunities." if status == "pass" else "AI agents cannot identify events or special occasions, missing opportunities to recommend time-sensitive experiences."}'
+        },
+        'Additional Services Information': {
+            'title': 'How AI understands your service offerings',
+            'explanation': f'{"AI agents can identify additional services (gift cards, catering, private dining), expanding discovery opportunities." if status == "pass" else "AI agents cannot identify additional services, limiting discovery to basic dining experiences only."}'
+        },
+        'Delivery & Takeout Information': {
+            'title': 'How AI knows your service options',
+            'explanation': f'{"AI agents can identify delivery and takeout options, helping customers find convenient dining solutions." if status == "pass" else "AI agents cannot identify delivery or takeout options, missing customers looking for off-premise dining."}'
+        },
+        'Parking & Accessibility Information': {
+            'title': 'How AI helps customers plan their visit',
+            'explanation': f'{"AI agents can provide parking and accessibility information, helping customers make informed decisions about visiting." if status == "pass" else "AI agents cannot provide parking or accessibility information, creating uncertainty for potential customers."}'
         }
     }
     
@@ -614,7 +890,21 @@ def transform_to_locked_insight(insight, url):
         'Interactive Forms': 'User engagement signals are missing',
         'Analytics Tracking': 'Measurement approach is not recognized',
         'Complete Heading Hierarchy': 'Content organization is unclear',
-        'Multimedia Content': 'Rich media is not properly recognized'
+        'Multimedia Content': 'Rich media is not properly recognized',
+        'Restaurant/Bar Schema Markup': 'AI cannot identify your establishment type',
+        'Menu Information Available': 'Your menu is invisible to AI agents',
+        'Location & Contact Information': 'Customers cannot find your location',
+        'Operating Hours Information': 'AI does not know when you are open',
+        'Reservation/Booking System': 'AI cannot help customers book tables',
+        'Review Visibility & Integration': 'Customer reviews are invisible to AI agents',
+        'Cuisine Type Identification': 'AI cannot identify your cuisine type',
+        'Dietary Restrictions Information': 'Dietary options are not visible to AI agents',
+        'Special Features & Amenities': 'Special features are not recognized by AI',
+        'Visual Content & Photo Galleries': 'Visual content is limited for AI understanding',
+        'Events & Calendar Information': 'Events are not discoverable by AI agents',
+        'Additional Services Information': 'Additional services are invisible to AI',
+        'Delivery & Takeout Information': 'Service options are unclear to AI agents',
+        'Parking & Accessibility Information': 'Accessibility information is missing'
     }
     
     # Get the interpretation explanation for blurred preview
@@ -628,15 +918,146 @@ def transform_to_locked_insight(insight, url):
     }
 
 def generate_interpretive_summary(score):
-    """Generate interpretive summary based on score"""
+    """Generate interpretive summary based on score for restaurants/bars"""
     if score >= 80:
-        return "AI systems have a strong understanding of your website's purpose and content."
+        return "AI agents have a strong understanding of your restaurant or bar, making you highly discoverable in food-related searches and recommendations."
     elif score >= 60:
-        return "AI partially understands your website, but several important signals remain unclear or misinterpreted."
+        return "AI agents partially understand your establishment, but several important signals remain unclear, limiting your visibility in discovery searches."
     elif score >= 40:
-        return "AI systems form an incomplete understanding of your website, with significant interpretation gaps."
+        return "AI agents form an incomplete understanding of your restaurant or bar, with significant gaps that reduce your discoverability."
     else:
-        return "AI struggles to form a coherent understanding of your website, with many signals missing or unclear."
+        return "AI agents struggle to identify and understand your establishment, making you nearly invisible in food discovery searches and recommendations."
+
+def generate_review_recommendations(parser, url, html):
+    """Generate recommendations based on review analysis and common restaurant review patterns"""
+    recommendations = []
+    
+    # Check what review platforms are present
+    has_google = 'Google' in parser.review_platforms
+    has_tripadvisor = 'TripAdvisor' in parser.review_platforms
+    has_yelp = 'Yelp' in parser.review_platforms
+    has_review_widgets = len(parser.review_widgets) > 0
+    has_social_media = len(parser.social_media_links) > 0
+    
+    # Recommendation 1: Review Platform Presence
+    if not has_google and not has_tripadvisor and not has_yelp:
+        recommendations.append({
+            'category': 'Review Visibility',
+            'priority': 'High',
+            'title': 'Add Review Platform Links',
+            'description': 'Link to your Google Business Profile, TripAdvisor, and Yelp pages. AI agents use these platforms to understand customer sentiment and make recommendations.',
+            'action': 'Add prominent links to your Google Maps listing, TripAdvisor page, and Yelp profile in your website footer or contact section.',
+            'impact': 'Increases discoverability in local search and AI-powered restaurant recommendations'
+        })
+    elif not has_google:
+        recommendations.append({
+            'category': 'Review Visibility',
+            'priority': 'High',
+            'title': 'Add Google Business Profile Link',
+            'description': 'Google Reviews are critical for AI agents. Most AI assistants prioritize Google Business listings when recommending restaurants.',
+            'action': 'Add a link to your Google Business Profile and embed Google Reviews widget on your website.',
+            'impact': 'Significantly improves visibility in Google-powered AI assistants and local search'
+        })
+    
+    # Recommendation 2: Review Widget Integration
+    if not has_review_widgets:
+        recommendations.append({
+            'category': 'Review Integration',
+            'priority': 'Medium',
+            'title': 'Embed Review Widgets',
+            'description': 'Displaying reviews directly on your website helps AI agents understand customer sentiment and your restaurant\'s strengths.',
+            'action': 'Embed Google Reviews widget or TripAdvisor review snippets on your homepage or dedicated reviews page.',
+            'impact': 'AI agents can better understand customer feedback and your restaurant\'s reputation'
+        })
+    
+    # Recommendation 3: Social Media Integration
+    if not has_social_media:
+        recommendations.append({
+            'category': 'Social Proof',
+            'priority': 'Medium',
+            'title': 'Link Social Media Accounts',
+            'description': 'Social media posts and reviews provide additional signals for AI agents about your restaurant\'s popularity and customer engagement.',
+            'action': 'Add links to your Instagram, Facebook, and other social media accounts. AI agents analyze social content for restaurant recommendations.',
+            'impact': 'Increases signals for AI agents about your restaurant\'s popularity and customer engagement'
+        })
+    
+    # Recommendation 4: Common Review Themes (Based on typical restaurant feedback)
+    html_lower = html.lower()
+    
+    # Check for common positive mentions
+    if 'wait' in html_lower or 'slow' in html_lower or 'time' in html_lower:
+        recommendations.append({
+            'category': 'Service Optimization',
+            'priority': 'Medium',
+            'title': 'Address Wait Time Concerns',
+            'description': 'Many restaurant reviews mention wait times. Proactively address this on your website.',
+            'action': 'Add information about reservation options, peak hours, or average wait times. Consider implementing online waitlist or reservation system.',
+            'impact': 'Reduces negative review mentions and improves customer expectations'
+        })
+    
+    if not parser.hours_info:
+        recommendations.append({
+            'category': 'Information Clarity',
+            'priority': 'High',
+            'title': 'Display Clear Operating Hours',
+            'description': 'One of the most common review complaints is confusion about hours or arriving when closed.',
+            'action': 'Prominently display your operating hours on your homepage and ensure they\'re accurate. Update for holidays and special events.',
+            'impact': 'Reduces customer frustration and negative reviews about hours'
+        })
+    
+    if not parser.menu_links or len(parser.menu_links) == 0:
+        recommendations.append({
+            'category': 'Menu Transparency',
+            'priority': 'High',
+            'title': 'Make Menu Easily Accessible',
+            'description': 'Reviews often mention menu clarity and availability. AI agents need menu information to make recommendations.',
+            'action': 'Add a clear "Menu" link in navigation and ensure menu is easily accessible. Include prices and dietary information (vegan, gluten-free, etc.).',
+            'impact': 'Improves customer decision-making and AI agent understanding of your offerings'
+        })
+    
+    # Recommendation 5: Response to Reviews
+    recommendations.append({
+        'category': 'Review Management',
+        'priority': 'High',
+        'title': 'Respond to Reviews Regularly',
+        'description': 'AI agents analyze review responses to understand how restaurants handle customer feedback. Active engagement signals quality.',
+        'action': 'Respond to reviews on Google, TripAdvisor, and Yelp within 24-48 hours. Thank positive reviewers and address concerns professionally.',
+        'impact': 'Shows active customer engagement and improves AI agent perception of your restaurant\'s quality'
+    })
+    
+    # Recommendation 6: Photo Optimization
+    if len(parser.images) < 10:
+        recommendations.append({
+            'category': 'Visual Content',
+            'priority': 'Medium',
+            'title': 'Add More High-Quality Photos',
+            'description': 'Reviews with photos get more attention from AI agents. Visual content helps AI understand your restaurant\'s atmosphere and food quality.',
+            'action': 'Add professional photos of your dishes, interior, and exterior. Encourage customers to share photos in reviews.',
+            'impact': 'Increases visual signals for AI agents and improves customer trust'
+        })
+    
+    # Recommendation 7: Price Range Clarity
+    if not parser.price_range_mentions:
+        recommendations.append({
+            'category': 'Pricing Transparency',
+            'priority': 'Medium',
+            'title': 'Clarify Price Range',
+            'description': 'Price range is a key factor in AI agent recommendations. Unclear pricing can lead to mismatched customer expectations.',
+            'action': 'Add price range indicators ($$, $$$) or average meal cost information. This helps AI agents match customers to appropriate restaurants.',
+            'impact': 'Improves AI agent matching and reduces customer surprise about pricing'
+        })
+    
+    # Recommendation 8: Special Features
+    recommendations.append({
+        'category': 'Unique Selling Points',
+        'priority': 'Medium',
+        'title': 'Highlight What Makes You Unique',
+        'description': 'AI agents look for unique features when making recommendations. Common differentiators include: outdoor seating, live music, happy hour, private dining, etc.',
+        'action': 'Clearly highlight special features, events, or unique aspects of your restaurant that customers mention positively in reviews.',
+        'impact': 'Helps AI agents differentiate your restaurant and match it to specific customer preferences'
+    })
+    
+    return recommendations
 
 def save_user_to_database(email, url, report_id, score):
     """Save user email to database for future purposes"""
@@ -946,6 +1367,52 @@ class RequestHandler(BaseHTTPRequestHandler):
             
             audit_result = perform_ai_audit(url)
             
+            # Generate review-based recommendations
+            # Fetch HTML again to analyze for recommendations
+            try:
+                ssl_context = ssl._create_unverified_context()
+                headers = {
+                    'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+                    'Accept-Language': 'en-US,en;q=0.5'
+                }
+                req = urllib.request.Request(url, headers=headers)
+                try:
+                    response = urllib.request.urlopen(req, timeout=10, context=ssl_context)
+                except urllib.error.HTTPError as e:
+                    if e.code == 403:
+                        simple_headers = {'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36'}
+                        req = urllib.request.Request(url, headers=simple_headers)
+                        response = urllib.request.urlopen(req, timeout=10, context=ssl_context)
+                    else:
+                        raise
+                html = response.read().decode('utf-8', errors='ignore')
+                
+                # Parse again to get parser data for recommendations
+                parser = HTMLAuditParser()
+                parser.feed(html)
+                
+                # Check for review widgets
+                review_widgets_found = []
+                if 'google' in html.lower() and ('review' in html.lower() or 'rating' in html.lower()):
+                    if 'maps/embed' in html.lower() or 'place_id' in html.lower():
+                        review_widgets_found.append('Google Reviews Widget')
+                if 'tripadvisor' in html.lower():
+                    review_widgets_found.append('TripAdvisor Widget')
+                if 'yelp' in html.lower() and 'review' in html.lower():
+                    review_widgets_found.append('Yelp Widget')
+                parser.review_widgets = review_widgets_found
+                
+                review_recommendations = generate_review_recommendations(parser, url, html)
+            except Exception as e:
+                # If we can't fetch again, generate basic recommendations
+                print(f'Warning: Could not generate review recommendations: {e}', flush=True)
+                parser = HTMLAuditParser()
+                review_recommendations = generate_review_recommendations(parser, url, '')
+            
+            # Add recommendations to audit result
+            audit_result['reviewRecommendations'] = review_recommendations
+            
             # Store full report
             report_id = str(uuid.uuid4())
             timestamp = datetime.now().isoformat()
@@ -1015,7 +1482,8 @@ class RequestHandler(BaseHTTPRequestHandler):
                 'lockedInsights': locked_insights_transformed,
                 'totalInsights': total_checks,
                 'reportId': report_id,
-                'locked': True
+                'locked': True,
+                'reviewRecommendations': audit_result.get('reviewRecommendations', [])
             }
             
             self.send_json_response(partial_report)
@@ -1115,7 +1583,8 @@ class RequestHandler(BaseHTTPRequestHandler):
                     'totalInsights': len(all_insights_transformed),
                     'reportId': report_id,
                     'unlocked': True,
-                    'locked': False
+                    'locked': False,
+                    'reviewRecommendations': full_report.get('reviewRecommendations', [])
                 }
                 
                 self.send_json_response(unlocked_report)

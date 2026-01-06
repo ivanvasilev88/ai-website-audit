@@ -9,8 +9,8 @@
 <body>
     <div class="container">
         <header>
-            <h1 class="title">Make Your Website AI-Friendly</h1>
-            <p class="subtitle">See how AI systems interpret your website</p>
+            <h1 class="title">AI Restaurant & Bar Visibility Audit</h1>
+            <p class="subtitle">See how AI agents discover and recommend your restaurant or bar</p>
         </header>
 
         <div class="scan-section">
@@ -20,6 +20,8 @@
                     id="urlInput" 
                     placeholder="Enter website (e.g., example.com)"
                     class="url-input"
+                    autocomplete="off"
+                    spellcheck="false"
                 >
                 <button id="scanButton" class="scan-button">Scan my site</button>
             </div>
@@ -42,19 +44,29 @@
 
             <!-- Free Insights (Exactly 4) -->
             <div class="free-insights-section">
-                <h3>What AI Currently Understands</h3>
+                <h3>What AI Agents Currently Understand About Your Restaurant/Bar</h3>
                 <div id="freeInsights" class="insights-list"></div>
             </div>
 
             <!-- What AI Still Doesn't Understand -->
             <div id="uncertaintySection" class="uncertainty-section hidden">
-                <h3>What AI Still Doesn't Understand</h3>
-                <p class="uncertainty-text">Based on this scan, AI systems still form an incomplete or inconsistent understanding of your website. These gaps affect how your site is summarized, explained, or recommended.</p>
+                <h3>What AI Agents Still Don't Understand</h3>
+                <p class="uncertainty-text">Based on this scan, AI agents still form an incomplete or inconsistent understanding of your restaurant or bar. These gaps affect how your establishment is discovered, summarized, and recommended to customers searching for dining options.</p>
             </div>
 
             <!-- Locked Insights Preview (16 insights, titles visible, descriptions hidden) -->
             <div id="lockedInsightsSection" class="locked-insights-section hidden">
                 <div id="lockedInsights" class="locked-insights-list"></div>
+            </div>
+            
+            <!-- Review-Based Recommendations Section (Visible in locked state) -->
+            <div id="reviewRecommendationsLocked" class="review-recommendations-section-locked hidden">
+                <h3>📋 Review-Based Recommendations</h3>
+                <p class="recommendations-intro">Based on review analysis and common customer feedback patterns, here are actionable recommendations to improve your AI discoverability:</p>
+                <div id="recommendationsListLocked" class="recommendations-list"></div>
+                <div class="recommendations-locked-overlay">
+                    <p>Unlock to see full recommendations with detailed action steps and impact analysis</p>
+                </div>
             </div>
 
             <!-- Unlock CTA Section -->
@@ -63,9 +75,9 @@
                 
                 <div class="unlock-value">
                     <ul>
-                        <li>See how AI currently describes your website</li>
-                        <li>Identify where interpretation breaks down</li>
-                        <li>Receive a complete downloadable report</li>
+                        <li>See how AI agents currently discover and describe your restaurant or bar</li>
+                        <li>Identify where AI interpretation breaks down for food discovery</li>
+                        <li>Receive a complete downloadable report with optimization recommendations</li>
                     </ul>
                 </div>
 
@@ -82,8 +94,16 @@
 
             <!-- Unlocked State (after payment) -->
             <div id="unlockedState" class="unlocked-state hidden">
-                <p class="unlocked-message">This reflects how AI systems currently interpret your website.</p>
+                <p class="unlocked-message">This reflects how AI agents currently discover and interpret your restaurant or bar.</p>
                 <div id="allInsights" class="all-insights-list"></div>
+                
+                <!-- Review-Based Recommendations Section -->
+                <div id="reviewRecommendations" class="review-recommendations-section hidden">
+                    <h3>📋 Review-Based Recommendations</h3>
+                    <p class="recommendations-intro">Based on review analysis and common customer feedback patterns, here are actionable recommendations to improve your AI discoverability:</p>
+                    <div id="recommendationsList" class="recommendations-list"></div>
+                </div>
+                
                 <div id="pdfSection" class="pdf-section">
                     <button id="downloadPdfButton" class="download-pdf-button">📥 Download PDF Report</button>
                 </div>

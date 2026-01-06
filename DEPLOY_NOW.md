@@ -1,107 +1,188 @@
-# Deploy Your Changes - Quick Guide
+# 🚀 Deploy to Render - Quick Guide
 
-## Step 1: Push to GitHub
-
-### Check what changed:
-```bash
-git status
-```
-
-### Add all changes:
-```bash
-git add .
-```
-
-### Commit changes:
-```bash
-git commit -m "Add privacy policy, GDPR cookies, UI improvements, and email functionality"
-```
-
-### Push to GitHub:
-```bash
-git push origin main
-```
-(Or `git push origin master` if your branch is called master)
+## Current Status
+✅ Code is ready for deployment
+✅ All features implemented:
+- Review-Based Recommendations (visible before payment)
+- 9 new restaurant/bar audit checks
+- Total: 34 audit checks
 
 ---
 
-## Step 2: Deploy to Get Public URL
+## Quick Deploy Steps
 
-### Option 1: Render (Easiest - 5 minutes)
+### Option 1: Using the Script (Easiest)
 
-1. **Go to**: https://render.com
-2. **Sign up/Login** (free)
-3. **Click**: "New +" → "Web Service"
-4. **Connect GitHub** (if not connected)
-5. **Select repository**: `ai-website-audit`
-6. **Configure**:
-   - **Name**: `ai-website-audit`
+```bash
+# Make script executable
+chmod +x deploy_to_render.sh
+
+# Run deployment script
+./deploy_to_render.sh
+```
+
+This will:
+1. Stage all changes
+2. Commit with descriptive message
+3. Push to GitHub
+4. Render will auto-deploy
+
+---
+
+### Option 2: Manual Steps
+
+#### Step 1: Commit and Push
+
+```bash
+# Stage all changes
+git add -A
+
+# Commit
+git commit -m "Add review-based recommendations and 9 new restaurant/bar audit checks
+
+- Added Review-Based Recommendations section visible before payment
+- Added 9 new restaurant/bar-specific audit checks
+- Enhanced review analysis framework
+- Total audit checks: 34 (up from 25)"
+
+# Push to GitHub
+git push origin main
+```
+
+#### Step 2: Render Auto-Deploys
+
+If you already have Render connected to your GitHub repo:
+- ✅ Render will automatically detect the push
+- ✅ It will start deploying in 1-2 minutes
+- ✅ Check your Render dashboard for status
+
+#### Step 3: Verify Deployment
+
+1. Go to: https://dashboard.render.com
+2. Click on your service
+3. Wait for "Live" status
+4. Copy your public URL
+5. Test it!
+
+---
+
+## If You Don't Have Render Set Up Yet
+
+### First Time Setup:
+
+1. **Go to Render**: https://render.com
+2. **Sign up** (free tier available)
+3. **Connect GitHub**:
+   - Click "New +" → "Web Service"
+   - Connect your GitHub account
+   - Select repository: `ai-website-audit`
+4. **Configure**:
+   - **Name**: `ai-website-audit` (or any name)
+   - **Region**: Choose closest to you
+   - **Branch**: `main`
+   - **Root Directory**: (leave empty)
    - **Environment**: `Python 3`
    - **Build Command**: (leave empty)
    - **Start Command**: `python3 server_standalone.py`
-7. **Click**: "Create Web Service"
-8. **Wait 2-3 minutes**
-9. **Get URL**: `https://your-app.onrender.com`
-
-**✅ Done! Your site is live!**
-
----
-
-### Option 2: Railway (If you already have it set up)
-
-1. **Go to**: https://railway.app
-2. **Open your project**
-3. **It will auto-deploy** from GitHub
-4. **Get URL**: `https://your-app.railway.app`
+5. **Deploy**:
+   - Click "Create Web Service"
+   - Wait 2-3 minutes
+   - Get your URL: `https://your-app.onrender.com`
 
 ---
 
-### Option 3: Ngrok (Instant - 2 minutes)
+## Environment Variables (Optional)
 
-**For quick testing:**
+If you want email functionality, add these in Render dashboard:
 
+1. Go to your service → "Environment"
+2. Add variables:
+   - `SMTP_SERVER` (e.g., `smtp.gmail.com`)
+   - `SMTP_PORT` (e.g., `587`)
+   - `SMTP_USER` (your email)
+   - `SMTP_PASSWORD` (app password)
+   - `FROM_EMAIL` (your email)
+   - `PORT` (usually auto-set by Render)
+
+**Note**: Email will work without these - it will save to `emails_to_send/` folder instead.
+
+---
+
+## Testing Your Deployment
+
+Once deployed, test:
+
+1. ✅ Open your Render URL
+2. ✅ Scan a restaurant website
+3. ✅ Check Review-Based Recommendations appear (before payment)
+4. ✅ Complete payment to see full recommendations
+5. ✅ Verify all 34 audit checks are working
+
+---
+
+## Troubleshooting
+
+### Deployment Fails?
+
+1. **Check Render logs**:
+   - Go to your service → "Logs"
+   - Look for error messages
+
+2. **Common issues**:
+   - **Port error**: Make sure `server_standalone.py` reads `PORT` from environment
+   - **Build error**: Check that all files are in the repo
+   - **Start error**: Verify Start Command is `python3 server_standalone.py`
+
+### Service Shows "Unavailable"?
+
+1. Check logs in Render dashboard
+2. Verify the service is running
+3. Try restarting the service in Render dashboard
+
+### Changes Not Showing?
+
+1. Wait 2-3 minutes for deployment
+2. Hard refresh browser (Cmd+Shift+R / Ctrl+Shift+R)
+3. Clear browser cache
+
+---
+
+## Files Changed in This Update
+
+- ✅ `server_standalone.py` - Added 9 new audit checks + review recommendations
+- ✅ `app.js` - Added recommendations display logic
+- ✅ `index.html` - Added recommendations section
+- ✅ `styles.css` - Added recommendations styling
+
+---
+
+## Next Steps After Deployment
+
+1. ✅ Share your Render URL with test users
+2. ✅ Monitor usage in Render dashboard
+3. ✅ Check user database (`user_database.json`) for signups
+4. ✅ Review audit results in admin panel: `/admin`
+
+---
+
+## Support
+
+If you encounter issues:
+1. Check Render logs
+2. Verify all files are committed
+3. Ensure Python 3.11+ is selected in Render
+4. Check that `Procfile` exists with: `web: python3 server_standalone.py`
+
+---
+
+**Ready to deploy? Run:**
 ```bash
-# Terminal 1: Start your server
-cd /Users/ivanvasilev/ai-website-audit
-python3 server_standalone.py
-
-# Terminal 2: Create public URL
-ngrok http 3000
+./deploy_to_render.sh
 ```
 
-**Get URL**: `https://xxxx-xx-xx-xx-xx.ngrok-free.app`
-
-**Note**: URL changes each time you restart ngrok, but works instantly!
-
----
-
-## Quick Commands Summary
-
+Or manually:
 ```bash
-# 1. Push to GitHub
-git add .
-git commit -m "Add privacy policy, GDPR cookies, UI improvements, and email functionality"
+git add -A
+git commit -m "Add review recommendations and 9 new audit checks"
 git push origin main
-
-# 2. Deploy (choose one):
-# - Render: Follow steps above
-# - Railway: Auto-deploys from GitHub
-# - Ngrok: ngrok http 3000
 ```
-
----
-
-## What Changed?
-
-- ✅ Privacy Policy page (GDPR compliant)
-- ✅ GDPR Cookie Consent banner
-- ✅ Footer with Privacy Policy link
-- ✅ Real email functionality with PDF attachment
-- ✅ User database for email storage
-- ✅ Modern, futuristic UI/UX improvements
-- ✅ Mobile-friendly PDF export
-- ✅ URL input accepts any format
-- ✅ Auto-scroll to payment modal
-
-All ready to deploy! 🚀
-
