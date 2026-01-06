@@ -16,9 +16,9 @@
         <div class="scan-section">
             <div class="input-group">
                 <input 
-                    type="url" 
+                    type="text" 
                     id="urlInput" 
-                    placeholder="Enter your website URL (e.g., https://example.com)"
+                    placeholder="Enter website (e.g., example.com)"
                     class="url-input"
                 >
                 <button id="scanButton" class="scan-button">Scan my site</button>
@@ -128,7 +128,63 @@
         <div id="error" class="error hidden"></div>
     </div>
 
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="footer-content">
+            <p>&copy; 2026 AI Website Audit. All rights reserved. <a href="/privacy-policy.html" class="privacy-link">Privacy Policy</a></p>
+        </div>
+    </footer>
+
+    <!-- GDPR Cookie Consent Banner -->
+    <div id="cookieConsent" class="cookie-consent hidden">
+        <div class="cookie-content">
+            <div class="cookie-text">
+                <h4>🍪 Cookie Consent</h4>
+                <p>We use cookies to enhance your experience and comply with GDPR. By clicking "Accept All", you consent to our use of cookies. You can customize your preferences or reject non-essential cookies.</p>
+            </div>
+            <div class="cookie-buttons">
+                <button id="acceptAllCookies" class="cookie-btn accept-btn">Accept All</button>
+                <button id="rejectCookies" class="cookie-btn reject-btn">Reject Non-Essential</button>
+                <button id="customizeCookies" class="cookie-btn customize-btn">Customize</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Cookie Settings Modal -->
+    <div id="cookieSettings" class="cookie-settings-modal hidden">
+        <div class="cookie-settings-content">
+            <h3>Cookie Preferences</h3>
+            <p>Manage your cookie preferences. Essential cookies are required for the website to function and cannot be disabled.</p>
+            
+            <div class="cookie-category">
+                <div class="cookie-category-header">
+                    <label>
+                        <input type="checkbox" id="essentialCookies" checked disabled>
+                        <span><strong>Essential Cookies</strong> (Required)</span>
+                    </label>
+                </div>
+                <p class="cookie-description">These cookies are necessary for the website to function properly. They store your cookie preferences and cannot be disabled.</p>
+            </div>
+
+            <div class="cookie-category">
+                <div class="cookie-category-header">
+                    <label>
+                        <input type="checkbox" id="analyticsCookies">
+                        <span><strong>Analytics Cookies</strong></span>
+                    </label>
+                </div>
+                <p class="cookie-description">These cookies help us understand how visitors interact with our website by collecting and reporting information anonymously.</p>
+            </div>
+
+            <div class="cookie-settings-buttons">
+                <button id="saveCookiePreferences" class="cookie-btn accept-btn">Save Preferences</button>
+                <button id="cancelCookieSettings" class="cookie-btn reject-btn">Cancel</button>
+            </div>
+        </div>
+    </div>
+
     <script src="app.js"></script>
+    <script src="cookies.js"></script>
 </body>
 </html>
 

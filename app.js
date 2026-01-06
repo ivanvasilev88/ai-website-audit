@@ -34,6 +34,16 @@ document.addEventListener('DOMContentLoaded', () => {
     
     unlockButton.addEventListener('click', () => {
         paymentModal.classList.remove('hidden');
+        // Auto-scroll to modal and focus on email input
+        setTimeout(() => {
+            paymentModal.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            const emailInput = document.getElementById('emailInput');
+            if (emailInput) {
+                setTimeout(() => {
+                    emailInput.focus();
+                }, 300);
+            }
+        }, 100);
     });
     
     closeModal.addEventListener('click', () => {
@@ -48,17 +58,16 @@ document.addEventListener('DOMContentLoaded', () => {
     downloadPdfButton.addEventListener('click', handlePdfDownload);
 
     async function handleScan() {
-        const url = urlInput.value.trim();
+        let url = urlInput.value.trim();
         
         if (!url) {
-            showError('Please enter a valid URL');
+            showError('Please enter a website URL');
             return;
         }
 
-        // Enhanced URL validation
+        // Auto-add https:// if no protocol specified
         if (!url.startsWith('http://') && !url.startsWith('https://')) {
-            showError('URL must start with http:// or https://');
-            return;
+            url = 'https://' + url;
         }
 
         // Basic URL validation
@@ -67,8 +76,10 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!urlObj.hostname || urlObj.hostname.length < 3) {
                 throw new Error('Invalid hostname');
             }
+            // Update input with formatted URL
+            urlInput.value = url;
         } catch (e) {
-            showError('Please enter a valid URL (e.g., https://example.com)');
+            showError('Please enter a valid website (e.g., example.com or www.example.com)');
             return;
         }
 
@@ -340,18 +351,46 @@ document.addEventListener('DOMContentLoaded', () => {
                 throw new Error(data.error || 'Failed to generate PDF');
             }
 
-            // Get HTML content and open in new window for printing
+            // Get HTML content
             const htmlContent = await response.text();
-            const printWindow = window.open('', '_blank');
-            printWindow.document.write(htmlContent);
-            printWindow.document.close();
             
-            // Wait for content to load, then trigger print
-            setTimeout(() => {
-                printWindow.print();
-                downloadPdfButton.disabled = false;
-                downloadPdfButton.textContent = '📥 Download PDF Report';
-            }, 500);
+            // Mobile-friendly PDF download
+            if (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) {
+                // For mobile: Create downloadable HTML file or use share API
+                const blob = new Blob([htmlContent], { type: 'text/html' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `ai-audit-report-${currentReportId}.html`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+                
+                // Also try to open for printing
+                const printWindow = window.open('', '_blank');
+                if (printWindow) {
+                    printWindow.document.write(htmlContent);
+                    printWindow.document.close();
+                    // On mobile, show message to use browser's print/save
+                    setTimeout(() => {
+                        alert('Report opened. Use your browser\'s menu to save as PDF or print.');
+                    }, 500);
+                }
+            } else {
+                // Desktop: Open in new window for printing
+                const printWindow = window.open('', '_blank');
+                printWindow.document.write(htmlContent);
+                printWindow.document.close();
+                
+                // Wait for content to load, then trigger print
+                setTimeout(() => {
+                    printWindow.print();
+                }, 500);
+            }
+
+            downloadPdfButton.disabled = false;
+            downloadPdfButton.textContent = '📥 Download PDF Report';
 
         } catch (err) {
             showError(err.message || 'Failed to download PDF');

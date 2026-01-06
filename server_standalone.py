@@ -16,6 +16,8 @@ import re
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
+from email.mime.base import MIMEBase
+from email import encoders
 import uuid
 import time
 from datetime import datetime
@@ -636,45 +638,211 @@ def generate_interpretive_summary(score):
     else:
         return "AI struggles to form a coherent understanding of your website, with many signals missing or unclear."
 
-def send_email_report(email, url, report_data):
-    """Send full report via email"""
+def save_user_to_database(email, url, report_id, score):
+    """Save user email to database for future purposes"""
     try:
-        # For demo purposes, we'll just log the email
-        # In production, configure SMTP settings
-        report_text = f"""
-AI Website Audit Report for {url}
-
-Overall Score: {report_data['score']}/100
-
-Detailed Results:
-"""
-        for item in report_data['details']:
-            report_text += f"\n{item['name']}: {item['points']}/{item['maxPoints']} ({item['status']})\n"
+        db_file = 'user_database.json'
+        users = []
         
-        # In production, uncomment and configure SMTP:
-        # msg = MIMEMultipart()
-        # msg['From'] = 'audit@yourdomain.com'
-        # msg['To'] = email
-        # msg['Subject'] = f'AI Website Audit Report for {url}'
-        # msg.attach(MIMEText(report_text, 'plain'))
-        # 
-        # server = smtplib.SMTP('smtp.gmail.com', 587)
-        # server.starttls()
-        # server.login('your_email@gmail.com', 'your_password')
-        # server.send_message(msg)
-        # server.quit()
+        # Load existing users
+        if os.path.exists(db_file):
+            try:
+                with open(db_file, 'r') as f:
+                    users = json.load(f)
+            except:
+                users = []
         
-        # For now, save to file for demo
-        filename = f"report_{int(time.time())}.txt"
-        with open(filename, 'w') as f:
-            f.write(f"Email: {email}\n")
-            f.write(f"URL: {url}\n\n")
-            f.write(report_text)
+        # Add new user
+        user_entry = {
+            'email': email,
+            'url': url,
+            'report_id': report_id,
+            'score': score,
+            'timestamp': datetime.now().isoformat(),
+            'date': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        }
         
+        users.append(user_entry)
+        
+        # Save back to file
+        with open(db_file, 'w') as f:
+            json.dump(users, f, indent=2)
+        
+        print(f"✅ User saved to database: {email}", flush=True)
         return True
     except Exception as e:
-        print(f"Email error: {e}", file=sys.stderr)
+        print(f"Database error: {e}", file=sys.stderr)
         return False
+
+def send_email_report(email, url, report_data, report_id):
+    """Send full report via email with PDF attachment"""
+    try:
+        # Save user to database
+        save_user_to_database(email, url, report_id, report_data['score'])
+        
+        # Get SMTP settings from environment variables or use defaults
+        smtp_server = os.environ.get('SMTP_SERVER', 'smtp.gmail.com')
+        smtp_port = int(os.environ.get('SMTP_PORT', '587'))
+        smtp_user = os.environ.get('SMTP_USER', '')
+        smtp_password = os.environ.get('SMTP_PASSWORD', '')
+        from_email = os.environ.get('FROM_EMAIL', smtp_user)
+        
+        # Generate PDF HTML content
+        pdf_html = generate_email_pdf_html(report_id, url, report_data)
+        
+        # Create email message
+        msg = MIMEMultipart()
+        msg['From'] = from_email
+        msg['To'] = email
+        msg['Subject'] = f'AI Website Audit Report for {url}'
+        
+        # Email body
+        body_text = f"""
+Hello!
+
+Thank you for using our AI Website Audit service.
+
+Your website ({url}) received an AI Readiness Score of {report_data['score']}/100.
+
+Please find your complete audit report attached as an HTML file that you can save as PDF.
+
+Best regards,
+AI Website Audit Team
+"""
+        msg.attach(MIMEText(body_text, 'plain'))
+        
+        # Attach PDF HTML as file
+        attachment = MIMEBase('application', 'octet-stream')
+        attachment.set_payload(pdf_html.encode('utf-8'))
+        encoders.encode_base64(attachment)
+        attachment.add_header(
+            'Content-Disposition',
+            f'attachment; filename= "AI_Audit_Report_{url.replace("https://", "").replace("http://", "").replace("/", "_")}.html"'
+        )
+        msg.attach(attachment)
+        
+        # Send email if SMTP credentials are configured
+        if smtp_user and smtp_password:
+            try:
+                server = smtplib.SMTP(smtp_server, smtp_port)
+                server.starttls()
+                server.login(smtp_user, smtp_password)
+                server.send_message(msg)
+                server.quit()
+                print(f"✅ Email sent successfully to {email}", flush=True)
+                return True
+            except Exception as e:
+                print(f"⚠️ SMTP error (email saved to database): {e}", file=sys.stderr)
+                # Still return True because user is saved to database
+                return True
+        else:
+            # If no SMTP configured, save email to file for manual sending
+            email_file = f"emails_to_send/email_{int(time.time())}_{email.replace('@', '_at_')}.eml"
+            os.makedirs('emails_to_send', exist_ok=True)
+            with open(email_file, 'w') as f:
+                f.write(f"To: {email}\n")
+                f.write(f"Subject: {msg['Subject']}\n")
+                f.write(f"From: {from_email}\n\n")
+                f.write(body_text)
+                f.write(f"\n\n--- PDF Report HTML ---\n{pdf_html}")
+            print(f"⚠️ SMTP not configured. Email saved to {email_file}", flush=True)
+            print(f"💡 To enable email sending, set environment variables:", flush=True)
+            print(f"   SMTP_SERVER, SMTP_PORT, SMTP_USER, SMTP_PASSWORD, FROM_EMAIL", flush=True)
+            return True  # Still return True because user is saved
+        
+    except Exception as e:
+        print(f"Email error: {e}", file=sys.stderr)
+        import traceback
+        traceback.print_exc()
+        return False
+
+def generate_email_pdf_html(report_id, url, report_data):
+    """Generate HTML content for PDF attachment"""
+    timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    
+    html_content = f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Website Audit Report - {url}</title>
+    <style>
+        body {{
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 40px 20px;
+            line-height: 1.6;
+            color: #333;
+        }}
+        .header {{
+            text-align: center;
+            margin-bottom: 40px;
+            border-bottom: 3px solid #667eea;
+            padding-bottom: 20px;
+        }}
+        .score {{
+            font-size: 4rem;
+            font-weight: bold;
+            color: #667eea;
+            margin: 20px 0;
+        }}
+        .insight {{
+            margin: 20px 0;
+            padding: 15px;
+            border-left: 4px solid #ddd;
+            background: #f9f9f9;
+        }}
+        .insight.pass {{
+            border-left-color: #10b981;
+        }}
+        .insight.warning {{
+            border-left-color: #f59e0b;
+        }}
+        .insight.fail {{
+            border-left-color: #ef4444;
+        }}
+        .footer {{
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 2px solid #eee;
+            text-align: center;
+            color: #666;
+            font-size: 0.9rem;
+        }}
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>AI Website Audit Report</h1>
+        <p><strong>Website:</strong> {url}</p>
+        <p><strong>Date:</strong> {timestamp}</p>
+        <div class="score">{report_data['score']}/100</div>
+    </div>
+    
+    <h2>Detailed Analysis</h2>
+"""
+    
+    for item in report_data['details']:
+        status_class = item.get('status', 'fail')
+        html_content += f"""
+    <div class="insight {status_class}">
+        <h3>{item['name']}</h3>
+        <p><strong>Score:</strong> {item['points']}/{item['maxPoints']} ({status_class.upper()})</p>
+        <p>{item.get('explanation', item.get('description', ''))}</p>
+    </div>
+"""
+    
+    html_content += f"""
+    <div class="footer">
+        <p>Generated by AI Website Audit Tool</p>
+        <p>Report ID: {report_id}</p>
+    </div>
+</body>
+</html>
+"""
+    
+    return html_content
 
 class RequestHandler(BaseHTTPRequestHandler):
     """HTTP request handler"""
@@ -691,18 +859,39 @@ class RequestHandler(BaseHTTPRequestHandler):
         """Serve static files and API endpoints"""
         path = self.path.split('?')[0]
         
+        # Debug: print the path being requested
+        print(f'GET request: {path}', flush=True)
+        
         if path == '/' or path == '/index.html':
             self.serve_file('index.html', 'text/html')
         elif path == '/admin':
             self.serve_admin_page()
+        elif path == '/privacy-policy.html':
+            # Explicitly handle privacy policy
+            self.serve_file('privacy-policy.html', 'text/html')
         elif path.startswith('/api/pdf/'):
             self.handle_pdf_download(path)
         elif path == '/api/admin/scans':
             self.handle_admin_scans()
+        elif path.endswith('.html'):
+            # Serve any other HTML file
+            filename = path.lstrip('/')
+            if os.path.exists(filename):
+                self.serve_file(filename, 'text/html')
+            else:
+                self.send_error(404)
         elif path.endswith('.css'):
-            self.serve_file(path.lstrip('/'), 'text/css')
+            filename = path.lstrip('/')
+            if os.path.exists(filename):
+                self.serve_file(filename, 'text/css')
+            else:
+                self.send_error(404)
         elif path.endswith('.js'):
-            self.serve_file(path.lstrip('/'), 'application/javascript')
+            filename = path.lstrip('/')
+            if os.path.exists(filename):
+                self.serve_file(filename, 'application/javascript')
+            else:
+                self.send_error(404)
         else:
             self.send_error(404)
     
@@ -874,7 +1063,7 @@ class RequestHandler(BaseHTTPRequestHandler):
             
             # Send full report via email
             full_report = reports_store[report_id]['full_report']
-            email_sent = send_email_report(email, reports_store[report_id]['url'], full_report)
+            email_sent = send_email_report(email, reports_store[report_id]['url'], full_report, report_id)
             
             self.send_json_response({
                 'success': True,
@@ -1187,24 +1376,47 @@ class RequestHandler(BaseHTTPRequestHandler):
 
 def run_server(port=3000, host='0.0.0.0'):
     """Start the HTTP server"""
-    server_address = (host, port)
-    httpd = HTTPServer(server_address, RequestHandler)
-    
-    # Get the actual port (in case port 0 was used for auto-assignment)
-    actual_port = httpd.server_address[1]
-    
-    print(f'🚀 Server running on http://{host}:{actual_port}')
-    if host == '0.0.0.0':
-        print(f'📝 Accessible from: http://localhost:{actual_port}')
-        print(f'🌐 Or from network: http://<your-ip>:{actual_port}')
-    else:
-        print(f'📝 Open your browser and navigate to: http://{host}:{actual_port}')
-    print(f'🛑 Press Ctrl+C to stop the server')
     try:
+        server_address = (host, port)
+        httpd = HTTPServer(server_address, RequestHandler)
+        
+        # Get the actual port (in case port 0 was used for auto-assignment)
+        actual_port = httpd.server_address[1]
+        
+        print(f'🚀 Server running on http://{host}:{actual_port}', flush=True)
+        if host == '0.0.0.0':
+            print(f'📝 Accessible from: http://localhost:{actual_port}', flush=True)
+            print(f'🌐 Or from network: http://<your-ip>:{actual_port}', flush=True)
+        else:
+            print(f'📝 Open your browser and navigate to: http://{host}:{actual_port}', flush=True)
+        print(f'🛑 Press Ctrl+C to stop the server', flush=True)
+        print(f'✅ Server is ready and listening on port {actual_port}', flush=True)
+        
         httpd.serve_forever()
+    except OSError as e:
+        if 'Address already in use' in str(e):
+            print(f'❌ Port {port} is already in use. Trying alternative port...', flush=True)
+            # Try next port
+            try:
+                server_address = (host, 0)  # Let OS assign port
+                httpd = HTTPServer(server_address, RequestHandler)
+                actual_port = httpd.server_address[1]
+                print(f'🚀 Server running on port {actual_port}', flush=True)
+                httpd.serve_forever()
+            except Exception as e2:
+                print(f'❌ Failed to start server: {e2}', flush=True)
+                sys.exit(1)
+        else:
+            print(f'❌ Failed to start server: {e}', flush=True)
+            sys.exit(1)
     except KeyboardInterrupt:
-        print('\n👋 Server stopped')
+        print('\n👋 Server stopped', flush=True)
         httpd.server_close()
+    except Exception as e:
+        print(f'❌ Server error: {e}', flush=True)
+        import traceback
+        traceback.print_exc()
+        sys.exit(1)
 
 if __name__ == '__main__':
     # Get port from environment variable (for cloud platforms) or command line

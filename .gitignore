@@ -1,16 +1,25 @@
+# User database and email files
+user_database.json
+emails_to_send/
+*.eml
+*.txt
+
+# Python
 __pycache__/
-*.pyc
-*.pyo
-*.pyd
+*.py[cod]
+*$py.class
+*.so
 .Python
-venv/
 env/
-*.log
-report_*.txt
-.DS_Store
-.env
+venv/
+ENV/
+
+# IDE
+.vscode/
+.idea/
 *.swp
 *.swo
-*~
 
-
+# OS
+.DS_Store
+Thumbs.db
